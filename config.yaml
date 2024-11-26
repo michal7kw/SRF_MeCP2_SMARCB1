@@ -1,0 +1,23 @@
+# Base directories
+dirs:
+  scratch: "/beegfs/scratch/ric.broccoli/kubacki.michal/Azenta"
+  results: "/beegfs/scratch/ric.broccoli/kubacki.michal/Azenta/results"
+
+# Genome parameters
+genome:
+  index: "/beegfs/scratch/ric.broccoli/kubacki.michal/Azenta/mm10/mm10"
+  fasta: "/beegfs/scratch/ric.broccoli/kubacki.michal/Azenta/mm10.fa"
+  size: "mm"
+
+# Peak calling parameters
+macs2:
+  genome_size: "mm"
+  q_value: 0.05
+
+# BigWig parameters
+bigwig:
+  bin_size: 10
+  normalize: "RPKM"
+
+# Logging
+log_dir: "/beegfs/scratch/ric.broccoli/kubacki.michal/Azenta/logs"
