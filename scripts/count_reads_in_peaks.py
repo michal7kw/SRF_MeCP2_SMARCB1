@@ -11,8 +11,17 @@ logger = logging.getLogger(__name__)
 def count_reads(peaks_file, bam_file, output_file, sample_name, threads=1):
     """Count reads in peaks with library size normalization"""
     
-    # Create output directory if it doesn't exist
-    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    # Create output directory and temporary directory
+    output_dir = os.path.dirname(output_file)
+    temp_dir = os.path.join(output_dir, 'tmp')
+    os.makedirs(output_dir, exist_ok=True)
+    os.makedirs(temp_dir, exist_ok=True)
+    
+    # Use temp_dir for temporary files
+    temp_prefix = os.path.join(temp_dir, os.path.basename(output_file))
+    genome_file = f"{temp_prefix}.genome"
+    sorted_peaks = f"{temp_prefix}.sorted.tmp"
+    counts_tmp = f"{temp_prefix}.counts.tmp"
     
     # First get total mapped reads for normalization
     logger.info("Calculating total mapped reads...")
@@ -22,13 +31,11 @@ def count_reads(peaks_file, bam_file, output_file, sample_name, threads=1):
     
     # Create genome file from BAM header for proper chromosome ordering
     logger.info("Creating genome file from BAM header...")
-    genome_file = f"{peaks_file}.genome"
     genome_cmd = f"samtools view -H {bam_file} | grep '^@SQ' | sed 's/@SQ\tSN://' | sed 's/\tLN:/\t/' > {genome_file}"
     subprocess.run(genome_cmd, shell=True, check=True)
     
     # Create sorted BED file
     logger.info("Sorting BED file...")
-    sorted_peaks = f"{peaks_file}.sorted.tmp"
     sort_cmd = f"bedtools sort -g {genome_file} -i {peaks_file} > {sorted_peaks}"
     subprocess.run(sort_cmd, shell=True, check=True)
     
@@ -37,12 +44,12 @@ def count_reads(peaks_file, bam_file, output_file, sample_name, threads=1):
         logger.info("Counting reads in peaks...")
         cmd = (f"bedtools coverage -a {sorted_peaks} -b {bam_file} "
                f"-sorted -g {genome_file} "
-               f"-counts > {output_file}.tmp")
+               f"-counts > {counts_tmp}")
         
         subprocess.run(cmd, shell=True, check=True)
         
         # Read counts and normalize
-        df = pd.read_csv(f"{output_file}.tmp", sep='\t', header=None,
+        df = pd.read_csv(counts_tmp, sep='\t', header=None,
                          names=['chr', 'start', 'end', 'gene', 'raw_count'])
         
         # Normalize to reads per million (RPM)
@@ -65,9 +72,14 @@ def count_reads(peaks_file, bam_file, output_file, sample_name, threads=1):
             
     finally:
         # Cleanup temporary files
-        for tmp_file in [f"{output_file}.tmp", genome_file, sorted_peaks]:
+        for tmp_file in [counts_tmp, genome_file, sorted_peaks]:
             if os.path.exists(tmp_file):
                 os.remove(tmp_file)
+        # Try to remove temp directory if empty
+        try:
+            os.rmdir(temp_dir)
+        except:
+            pass
 
 def main():
     parser = argparse.ArgumentParser(description='Count reads in peaks')
@@ -83,9 +95,6 @@ def main():
                        help='Number of threads to use')
     
     args = parser.parse_args()
-    
-    # Create output directory if it doesn't exist
-    os.makedirs(os.path.dirname(args.output), exist_ok=True)
     
     try:
         count_reads(args.peaks, args.bam, args.output, args.sample_name, threads=args.threads)

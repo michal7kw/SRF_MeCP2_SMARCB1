@@ -31,7 +31,6 @@ for fastq in glob.glob("90-1102945428/00_fastq/*_R1_001.fastq.gz"):
 
 SAMPLES = list(SAMPLE_DIRS.keys())
 
-# Add after SAMPLES definition to verify sample discovery
 print("Found samples:", SAMPLES)
 
 # Debug information
@@ -160,7 +159,7 @@ rule create_bigwig:
         bai = os.path.join(RESULTS_DIR, "bowtie2/{sample}.sorted.bam.bai")
     output:
         os.path.join(RESULTS_DIR, "bigwig/{sample}.bw")
-    threads: 4
+    threads: 32
     shell:
         """
         bamCoverage -b {input.bam} -o {output} \
@@ -222,18 +221,18 @@ rule create_bigwig:
 #     script:
 #         "scripts/compare_peaks.py"
 
-# Debug information
-for sample, directory in SAMPLE_DIRS.items():
-    r1 = f"{directory}/00_fastq/{sample}_R1_001.fastq.gz"
-    r2 = f"{directory}/00_fastq/{sample}_R2_001.fastq.gz"
-    print(f"Checking {sample}:")
-    print(f"R1 exists: {os.path.exists(r1)}")
-    print(f"R2 exists: {os.path.exists(r2)}")
+# # Debug information
+# for sample, directory in SAMPLE_DIRS.items():
+#     r1 = f"{directory}/00_fastq/{sample}_R1_001.fastq.gz"
+#     r2 = f"{directory}/00_fastq/{sample}_R2_001.fastq.gz"
+#     print(f"Checking {sample}:")
+#     print(f"R1 exists: {os.path.exists(r1)}")
+#     print(f"R2 exists: {os.path.exists(r2)}")
 
-print("\nDEBUG - All found FASTQ files:")
-for fastq in glob.glob("*/00_fastq/*_R1_001.fastq.gz"):
-    print(f"Found FASTQ: {fastq}")
+# print("\nDEBUG - All found FASTQ files:")
+# for fastq in glob.glob("*/00_fastq/*_R1_001.fastq.gz"):
+#     print(f"Found FASTQ: {fastq}")
 
-print("\nDEBUG - Sample directories:")
-for sample, directory in SAMPLE_DIRS.items():
-    print(f"Sample: {sample}, Directory: {directory}") 
+# print("\nDEBUG - Sample directories:")
+# for sample, directory in SAMPLE_DIRS.items():
+#     print(f"Sample: {sample}, Directory: {directory}") 
