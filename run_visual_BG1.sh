@@ -16,6 +16,6 @@ conda activate jupyter_nb
 
 python scripts/visualize_promoters.py \
     --input results/peak_analysis_alt/annotated_promoters.txt \
-    --output-dir results/peak_analysis_alt/plots
-
+    --output-dir results/peak_analysis_alt/plots \
+    --sample-name BG1
     

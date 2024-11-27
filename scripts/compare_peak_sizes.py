@@ -22,8 +22,11 @@ def validate_input_data(count_files):
         if df.empty or df['count'].isnull().all():
             raise ValueError(f"No valid count data in {file}")
 
-def compare_peaks(peak_count_files, output_file, threads=1):
+def compare_peaks(peak_count_files, output_file, sample_name, threads=1):
     """Compare normalized peak counts between conditions."""
+    
+    # Create output directory if it doesn't exist
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
     
     # Read and process peak counts
     peak_counts = {}
@@ -33,10 +36,14 @@ def compare_peaks(peak_count_files, output_file, threads=1):
         sample = os.path.basename(count_file).replace('_promoter_counts.txt', '')
         logger.info(f"Reading {count_file}...")
         
-        df = pd.read_csv(count_file, sep='\t')
-        if first_df is None:
-            first_df = df[['chr', 'start', 'end']]
-        peak_counts[sample] = df['count']  # Using normalized counts
+        try:
+            df = pd.read_csv(count_file, sep='\t')
+            if first_df is None:
+                first_df = df[['chr', 'start', 'end']]
+            peak_counts[sample] = df['count']  # Using normalized counts
+        except Exception as e:
+            logger.error(f"Error reading {count_file}: {str(e)}")
+            raise
     
     # Create counts DataFrame
     counts_df = pd.DataFrame(peak_counts)
@@ -79,6 +86,8 @@ def main():
                         help='List of peak count files')
     parser.add_argument('--output', required=True,
                         help='Output comparison file')
+    parser.add_argument('--sample-name', required=True,
+                        help='Sample name')
     parser.add_argument('--threads', type=int, default=1,
                         help='Number of threads to use')
     
@@ -89,7 +98,7 @@ def main():
         os.makedirs(os.path.dirname(args.output), exist_ok=True)
         
         # Run analysis
-        compare_peaks(args.peak_counts, args.output, threads=args.threads)
+        compare_peaks(args.peak_counts, args.output, args.sample_name, threads=args.threads)
     except Exception as e:
         logger.error(f"Analysis failed: {str(e)}")
         raise

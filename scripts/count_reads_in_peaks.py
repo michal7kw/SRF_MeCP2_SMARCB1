@@ -8,8 +8,11 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def count_reads(peaks_file, bam_file, output_file, threads=1):
+def count_reads(peaks_file, bam_file, output_file, sample_name, threads=1):
     """Count reads in peaks with library size normalization"""
+    
+    # Create output directory if it doesn't exist
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
     
     # First get total mapped reads for normalization
     logger.info("Calculating total mapped reads...")
@@ -74,6 +77,8 @@ def main():
                         help='BAM file')
     parser.add_argument('--output', required=True,
                         help='Output counts file')
+    parser.add_argument('--sample-name', required=True,
+                        help='Sample name')
     parser.add_argument('--threads', type=int, default=1,
                        help='Number of threads to use')
     
@@ -83,7 +88,7 @@ def main():
     os.makedirs(os.path.dirname(args.output), exist_ok=True)
     
     try:
-        count_reads(args.peaks, args.bam, args.output, threads=args.threads)
+        count_reads(args.peaks, args.bam, args.output, args.sample_name, threads=args.threads)
     except Exception as e:
         logger.error(f"Error processing {args.bam}: {str(e)}")
         sys.exit(1)

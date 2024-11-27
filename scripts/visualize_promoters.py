@@ -9,15 +9,16 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def visualize_promoters(comparison_file, output_dir):
+def visualize_promoters(comparison_file, output_dir, sample_name):
     """Create visualizations for promoter comparison between BG and BM samples."""
+    
+    # Create sample-specific output directory
+    sample_output_dir = os.path.join(output_dir, sample_name)
+    os.makedirs(sample_output_dir, exist_ok=True)
     
     # Read the data
     df = pd.read_csv(comparison_file, sep='\t')
     logger.info(f"Loaded {len(df)} promoters from comparison file")
-    
-    # Create output directory
-    os.makedirs(output_dir, exist_ok=True)
     
     # Set plot style
     plt.style.use('default')
@@ -88,7 +89,7 @@ def visualize_promoters(comparison_file, output_dir):
     ]
     plt.legend(handles=legend_elements, loc='lower right')
     
-    plt.savefig(os.path.join(output_dir, 'ma_plot.png'), dpi=300, bbox_inches='tight')
+    plt.savefig(os.path.join(sample_output_dir, f'ma_plot_{sample_name}.png'), dpi=300, bbox_inches='tight')
     plt.close()
     
     # 2. Peak Intensity Distribution
@@ -114,7 +115,7 @@ def visualize_promoters(comparison_file, output_dir):
     plt.title('Distribution of Fold Changes')
     
     plt.tight_layout()
-    plt.savefig(os.path.join(output_dir, 'intensity_distributions.png'), dpi=300, bbox_inches='tight')
+    plt.savefig(os.path.join(sample_output_dir, f'intensity_distributions_{sample_name}.png'), dpi=300, bbox_inches='tight')
     plt.close()
     
     # 3. Chromosome-wise distribution of changes
@@ -160,7 +161,7 @@ def visualize_promoters(comparison_file, output_dir):
                 fontsize=8)
     
     plt.tight_layout()
-    plt.savefig(os.path.join(output_dir, 'chromosome_distribution.png'), dpi=300, bbox_inches='tight')
+    plt.savefig(os.path.join(sample_output_dir, f'chromosome_distribution_{sample_name}.png'), dpi=300, bbox_inches='tight')
     plt.close()
     
     # Generate summary statistics
@@ -176,13 +177,13 @@ def visualize_promoters(comparison_file, output_dir):
     }
     
     # Save summary
-    with open(os.path.join(output_dir, 'summary_statistics.txt'), 'w') as f:
+    with open(os.path.join(sample_output_dir, f'summary_statistics_{sample_name}.txt'), 'w') as f:
         for key, value in summary.items():
             f.write(f"{key}: {value:.2f}\n")
     
     # Save promoters with significant changes
     significant_promoters = df[abs(df['log2_fold_change']) > 1].sort_values('log2_fold_change', ascending=False)
-    significant_promoters.to_csv(os.path.join(output_dir, 'significant_changes.tsv'), sep='\t', index=False)
+    significant_promoters.to_csv(os.path.join(sample_output_dir, f'significant_changes_{sample_name}.tsv'), sep='\t', index=False)
     
     logger.info("Visualization completed successfully")
     return summary
@@ -193,11 +194,13 @@ def main():
                         help='Promoter comparison file')
     parser.add_argument('--output-dir', required=True,
                         help='Output directory for plots')
+    parser.add_argument('--sample-name', required=True,
+                        help='Sample name')
     
     args = parser.parse_args()
     
     try:
-        summary = visualize_promoters(args.input, args.output_dir)
+        summary = visualize_promoters(args.input, args.output_dir, args.sample_name)
         for key, value in summary.items():
             logger.info(f"{key}: {value:.2f}")
     except Exception as e:

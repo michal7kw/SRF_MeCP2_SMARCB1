@@ -6,10 +6,13 @@ import os
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def annotate_promoters(comparison_file, gene_list_file, output_file):
+def annotate_promoters(comparison_file, gene_list_file, output_file, sample_name):
     """
     Annotate the promoter comparison results with gene information.
     """
+    # Create output directory if it doesn't exist
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    
     # Read comparison results
     logger.info(f"Reading comparison results from {comparison_file}")
     comp_df = pd.read_csv(comparison_file, sep='\t')
@@ -60,10 +63,10 @@ def annotate_promoters(comparison_file, gene_list_file, output_file):
     # Save top changes to a separate file
     output_dir = os.path.dirname(output_file)
     top_changes = annotated_df[abs(annotated_df['log2_fold_change']) > 1].copy()
-    top_changes.to_csv(os.path.join(output_dir, 'significant_changes.tsv'), 
+    top_changes.to_csv(os.path.join(output_dir, f'significant_changes_{sample_name}.tsv'), 
                       sep='\t', index=False)
     
-    logger.info(f"Saved {len(top_changes)} significant changes to significant_changes.tsv")
+    logger.info(f"Saved {len(top_changes)} significant changes to significant_changes_{sample_name}.tsv")
 
 def main():
     parser = argparse.ArgumentParser(description='Annotate promoter comparison results')
@@ -73,11 +76,13 @@ def main():
                         help='Original gene list file')
     parser.add_argument('--output', required=True,
                         help='Output annotated file')
+    parser.add_argument('--sample-name', required=True,
+                        help='Sample name') 
     
     args = parser.parse_args()
     
     try:
-        annotate_promoters(args.input, args.gene_list, args.output)
+        annotate_promoters(args.input, args.gene_list, args.output, args.sample_name)
     except Exception as e:
         logger.error(f"Annotation failed: {str(e)}")
         raise
