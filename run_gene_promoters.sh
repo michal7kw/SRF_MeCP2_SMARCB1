@@ -15,13 +15,6 @@ set -x
 source /opt/common/tools/ric.cosr/miniconda3/bin/activate
 conda activate jupyter_nb
 
-# Set parameters
-export NCORES=32
-export SAMTOOLS_THREADS=$((NCORES/2))
-
-BG_SAMPLE="BG1"
-BM_SAMPLE="BM1"
-
 # Step 2: Create promoter regions
 echo "Creating promoter regions..."
 python scripts/create_promoter_regions.py \

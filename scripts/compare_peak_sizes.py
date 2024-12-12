@@ -39,9 +39,26 @@ def compare_peaks(peak_count_files, output_file, sample_name, threads=1):
         
         try:
             df = pd.read_csv(count_file, sep='\t')
+            # Log the columns found in the file for debugging
+            logger.info(f"Columns in {count_file}: {df.columns.tolist()}")
+            
             if first_df is None:
                 first_df = df[['chr', 'start', 'end']]
-            peak_counts[sample] = df['count']
+            
+            # Try different possible column names for the count data
+            count_column = None
+            for col in ['count', 'raw_count', 'counts']:
+                if col in df.columns:
+                    count_column = col
+                    break
+            
+            if count_column is None:
+                # If no known count column is found, use the last column
+                count_column = df.columns[-1]
+                logger.warning(f"No standard count column found, using column: {count_column}")
+            
+            peak_counts[sample] = df[count_column]
+            
         except Exception as e:
             logger.error(f"Error reading {count_file}: {str(e)}")
             raise

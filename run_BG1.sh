@@ -16,7 +16,7 @@ FASTQ_DIR="90-1102945428/00_fastq"
 RESULTS_DIR="results"
 mkdir -p ${RESULTS_DIR}/{trimmed,filtered,bowtie2_alt,peaks_alt}
 
-# # 1. Initial FastQC (commented out as requested)
+# # 1. Initial FastQC
 # echo "Running initial FastQC..."
 # mkdir -p ${RESULTS_DIR}/fastqc
 # fastqc -t 32 -o ${RESULTS_DIR}/fastqc \
@@ -42,6 +42,8 @@ bowtie2 -p 32 \
     -x /beegfs/scratch/ric.broccoli/kubacki.michal/Azenta/mm10/mm10 \
     -1 ${RESULTS_DIR}/trimmed/BG1_R1_trimmed.fastq.gz \
     -2 ${RESULTS_DIR}/trimmed/BG1_R2_trimmed.fastq.gz 2> ${RESULTS_DIR}/bowtie2_alt/BG1_align.log | \
+    samtools view -h | \
+    awk 'BEGIN {OFS="\t"} /^@/ {print} !/^@/ {print $0 "\tRG:Z:BG1"}' | \
     samtools view -q 30 -F 1804 -f 2 -b | \
     samtools sort -@ 32 -o ${RESULTS_DIR}/bowtie2_alt/BG1.sorted.bam -
 
