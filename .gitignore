@@ -16,6 +16,9 @@
 *.sorted
 *.md5
 
+
+
 .snakemake/
 90-1102945428/
+**/tmp/
 
