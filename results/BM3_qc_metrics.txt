@@ -1,20 +1,22 @@
-Initial read counts:
-Raw reads: 28416738
-After trimming: 26715358
-10717330 + 0 in total (QC-passed reads + QC-failed reads)
-10717330 + 0 primary
+=== QC Metrics for BM3 ===
+
+Post-deduplication stats:
+599798 + 0 in total (QC-passed reads + QC-failed reads)
+599798 + 0 primary
 0 + 0 secondary
 0 + 0 supplementary
 0 + 0 duplicates
 0 + 0 primary duplicates
-10717330 + 0 mapped (100.00% : N/A)
-10717330 + 0 primary mapped (100.00% : N/A)
-10717330 + 0 paired in sequencing
-5358665 + 0 read1
-5358665 + 0 read2
-10717330 + 0 properly paired (100.00% : N/A)
-10717330 + 0 with itself and mate mapped
+599798 + 0 mapped (100.00% : N/A)
+599798 + 0 primary mapped (100.00% : N/A)
+599798 + 0 paired in sequencing
+299899 + 0 read1
+299899 + 0 read2
+599798 + 0 properly paired (100.00% : N/A)
+599798 + 0 with itself and mate mapped
 0 + 0 singletons (0.00% : N/A)
 0 + 0 with mate mapped to a different chr
 0 + 0 with mate mapped to a different chr (mapQ>=5)
-839
+
+Number of peaks:
+23009 results/peaks/BM3_peaks.narrowPeak

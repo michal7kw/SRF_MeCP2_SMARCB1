@@ -16,12 +16,12 @@ FASTQ_DIR="90-1102945428/00_fastq"
 RESULTS_DIR="results"
 mkdir -p ${RESULTS_DIR}/{trimmed,filtered,bowtie2_alt,peaks_alt}
 
-# # 1. Initial FastQC
-# echo "Running initial FastQC..."
-# mkdir -p ${RESULTS_DIR}/fastqc
-# fastqc -t 32 -o ${RESULTS_DIR}/fastqc \
-#     ${FASTQ_DIR}/BG1_R1_001.fastq.gz \
-#     ${FASTQ_DIR}/BG1_R2_001.fastq.gz
+# 1. Initial FastQC
+echo "Running initial FastQC..."
+mkdir -p ${RESULTS_DIR}/fastqc
+fastqc -t 32 -o ${RESULTS_DIR}/fastqc \
+    ${FASTQ_DIR}/BG1_R1_001.fastq.gz \
+    ${FASTQ_DIR}/BG1_R2_001.fastq.gz
 
 # 1. Trim adapters and low quality bases with Cut&Tag optimized parameters
 echo "Starting adapter trimming..."
