@@ -1,8 +1,0 @@
-Total promoters: 258.00
-Mean BG intensity: 2.05
-Mean BM intensity: 6.58
-Promoters up in BM (FC > 2): 18.00
-Promoters down in BM (FC < -2): 6.00
-Median fold change: 4.38
-Mean fold change: 2.69
-Std fold change: 3.55

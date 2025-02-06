@@ -45,17 +45,7 @@ def compare_peaks(peak_count_files, output_file, sample_name, threads=1):
             if first_df is None:
                 first_df = df[['chr', 'start', 'end']]
             
-            # Try different possible column names for the count data
-            count_column = None
-            for col in ['count', 'raw_count', 'counts']:
-                if col in df.columns:
-                    count_column = col
-                    break
-            
-            if count_column is None:
-                # If no known count column is found, use the last column
-                count_column = df.columns[-1]
-                logger.warning(f"No standard count column found, using column: {count_column}")
+            count_column = 'count'
             
             peak_counts[sample] = df[count_column]
             

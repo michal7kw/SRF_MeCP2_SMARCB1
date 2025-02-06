@@ -6,11 +6,13 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=32
 #SBATCH --array=1-4
-#SBATCH --error="logs/%A_%a.err"
-#SBATCH --output="logs/%A_%a.out"
+#SBATCH --error="logs/run_complete_pipeline_%a.err"
+#SBATCH --output="logs/run_complete_pipeline_%a.out"
 
 # Set working directory
 WORKING_DIR="/beegfs/scratch/ric.broccoli/kubacki.michal/SRF_MeCP2_SMARCB1"
+FASTQ_DIR="90-1102945428/00_fastq"
+RESULTS_DIR="results"
 cd ${WORKING_DIR}
 
 # Activate conda environment
@@ -30,8 +32,6 @@ SAMPLE=${SAMPLES[$SLURM_ARRAY_TASK_ID-1]}
 echo "Processing sample: $SAMPLE"
 
 # Define directories
-FASTQ_DIR="90-1102945428/00_fastq"
-RESULTS_DIR="results"
 mkdir -p ${RESULTS_DIR}/{trimmed,filtered,bowtie2,peaks,bigwig,fastqc}
 
 # Generate chromosome sizes file if not already present
@@ -43,11 +43,11 @@ fi
 
 echo "=== Starting pipeline for ${SAMPLE} ==="
 
-# # 1. Initial FastQC
-# echo "Running initial FastQC..."
-# fastqc -t 32 -o ${RESULTS_DIR}/fastqc \
-#     ${FASTQ_DIR}/${SAMPLE}_R1_001.fastq.gz \
-#     ${FASTQ_DIR}/${SAMPLE}_R2_001.fastq.gz
+# 1. Initial FastQC
+echo "Running initial FastQC..."
+fastqc -t 32 -o ${RESULTS_DIR}/fastqc \
+    ${FASTQ_DIR}/${SAMPLE}_R1_001.fastq.gz \
+    ${FASTQ_DIR}/${SAMPLE}_R2_001.fastq.gz
 
 # 2. Trim adapters and low quality bases
 echo "Starting adapter trimming..."
@@ -107,7 +107,28 @@ picard MarkDuplicates \
     VALIDATION_STRINGENCY=LENIENT \
     CREATE_INDEX=true
 
-# Remove intermediate BAM file with read groups
+# Generate QC metrics before removing intermediate files
+echo "Generating QC metrics..."
+{
+    echo "=== QC Metrics for ${SAMPLE} ==="
+    echo "Initial read counts:"
+    echo "Raw reads: $(zcat ${FASTQ_DIR}/${SAMPLE}_R1_001.fastq.gz | wc -l | awk '{print $1/4}')"
+    echo "After trimming: $(zcat ${RESULTS_DIR}/trimmed/${SAMPLE}_R1_trimmed.fastq.gz | wc -l | awk '{print $1/4}')"
+    
+    echo -e "\nAlignment stats (pre-deduplication):"
+    samtools flagstat ${RESULTS_DIR}/bowtie2/${SAMPLE}.with_rg.bam
+    
+    echo -e "\nPost-deduplication stats:"
+    samtools flagstat ${RESULTS_DIR}/filtered/${SAMPLE}.dedup.bam
+    
+    echo -e "\nDuplication metrics:"
+    cat ${RESULTS_DIR}/filtered/${SAMPLE}.metrics.txt
+    
+    echo -e "\nNumber of peaks:"
+    wc -l ${RESULTS_DIR}/peaks/${SAMPLE}_peaks.narrowPeak
+} > ${RESULTS_DIR}/${SAMPLE}_qc_metrics.txt
+
+# Now remove intermediate BAM files to save space
 rm ${RESULTS_DIR}/bowtie2/${SAMPLE}.with_rg.bam
 rm ${RESULTS_DIR}/bowtie2/${SAMPLE}.with_rg.bam.bai
 
@@ -151,20 +172,5 @@ macs2 callpeak \
     --keep-dup all \
     --qvalue 0.05 \
     --call-summits
-
-# 9. Generate QC metrics
-echo "Generating QC metrics..."
-{
-    echo "=== QC Metrics for ${SAMPLE} ===" 
-    echo "Initial read counts:"
-    echo "Raw reads: $(zcat ${FASTQ_DIR}/${SAMPLE}_R1_001.fastq.gz | wc -l | awk '{print $1/4}')"
-    echo "After trimming: $(zcat ${RESULTS_DIR}/trimmed/${SAMPLE}_R1_trimmed.fastq.gz | wc -l | awk '{print $1/4}')"
-    echo -e "\nAlignment stats:"
-    samtools flagstat ${RESULTS_DIR}/bowtie2/${SAMPLE}.with_rg.bam
-    echo -e "\nPost-deduplication stats:"
-    samtools flagstat ${RESULTS_DIR}/filtered/${SAMPLE}.dedup.bam
-    echo -e "\nNumber of peaks:"
-    wc -l ${RESULTS_DIR}/peaks/${SAMPLE}_peaks.narrowPeak
-} > ${RESULTS_DIR}/${SAMPLE}_qc_metrics.txt
 
 echo "=== Pipeline completed successfully for ${SAMPLE}! ==="
