@@ -4,22 +4,6 @@ Raw reads: 275225464
 After trimming: 255248397
 
 Alignment stats (pre-deduplication):
-170144926 + 0 in total (QC-passed reads + QC-failed reads)
-170144926 + 0 primary
-0 + 0 secondary
-0 + 0 supplementary
-0 + 0 duplicates
-0 + 0 primary duplicates
-170144926 + 0 mapped (100.00% : N/A)
-170144926 + 0 primary mapped (100.00% : N/A)
-170144926 + 0 paired in sequencing
-85072463 + 0 read1
-85072463 + 0 read2
-170144926 + 0 properly paired (100.00% : N/A)
-170144926 + 0 with itself and mate mapped
-0 + 0 singletons (0.00% : N/A)
-0 + 0 with mate mapped to a different chr
-0 + 0 with mate mapped to a different chr (mapQ>=5)
 
 Post-deduplication stats:
 20337510 + 0 in total (QC-passed reads + QC-failed reads)
