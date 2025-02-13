@@ -1,25 +1,36 @@
 #!/bin/bash
-#SBATCH --job-name=SMARCB1_pipeline
+
+# This script runs a complete ChIP-seq analysis pipeline for SMARCB1 samples
+# It performs the following steps:
+# 1. Initial FastQC quality control
+# 2. Adapter and quality trimming with Trimmomatic
+# 3. Alignment with Bowtie2
+# 4. Read group addition
+# 5. PCR duplicate removal
+# 6. BigWig file generation
+# 7. Peak calling with MACS2
+
+#SBATCH --job-name=1_run_complete_pipeline
 #SBATCH --account=kubacki.michal
 #SBATCH --mem=128GB
 #SBATCH --time=7-00:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=32
-#SBATCH --array=1-4
-#SBATCH --error="logs/run_complete_pipeline_%a.err"
-#SBATCH --output="logs/run_complete_pipeline_%a.out"
+#SBATCH --array=1-4                          # Process 4 samples in parallel
+#SBATCH --error="logs/1_run_complete_pipelin.err"
+#SBATCH --output="logs/1_run_complete_pipeline.out"
 
-# Set working directory
+# Set working directory and paths
 WORKING_DIR="/beegfs/scratch/ric.broccoli/kubacki.michal/SRF_MeCP2_SMARCB1"
 FASTQ_DIR="90-1102945428/00_fastq"
 RESULTS_DIR="results"
 cd ${WORKING_DIR}
 
-# Activate conda environment
+# Load required software environment
 source /opt/common/tools/ric.cosr/miniconda3/bin/activate
 conda activate jupyter_nb
 
-# Define sample names array
+# Define sample names to process
 declare -a SAMPLES=(
     "BG1"
     "BG2"
@@ -27,14 +38,14 @@ declare -a SAMPLES=(
     "BM3"
 )
 
-# Get current sample name from array index
+# Get current sample based on array task ID
 SAMPLE=${SAMPLES[$SLURM_ARRAY_TASK_ID-1]}
 echo "Processing sample: $SAMPLE"
 
-# Define directories
+# Create output directory structure
 mkdir -p ${RESULTS_DIR}/{trimmed,filtered,bowtie2,peaks,bigwig,fastqc}
 
-# Generate chromosome sizes file if not already present
+# Generate chromosome sizes file for mm10 genome if not present
 CHROM_SIZES="${WORKING_DIR}/mm10/mm10.chrom.sizes"
 if [ ! -f "$CHROM_SIZES" ]; then
     echo "Generating chromosome sizes file..."
@@ -43,19 +54,20 @@ fi
 
 echo "=== Starting pipeline for ${SAMPLE} ==="
 
-# 1. Initial FastQC
+# Step 1: Initial quality control with FastQC
 echo "Running initial FastQC..."
 fastqc -t 32 -o ${RESULTS_DIR}/fastqc \
     ${FASTQ_DIR}/${SAMPLE}_R1_001.fastq.gz \
     ${FASTQ_DIR}/${SAMPLE}_R2_001.fastq.gz
 
-# 2. Trim adapters and low quality bases
+# Step 2: Trim adapters and low quality bases with Trimmomatic
 echo "Starting adapter trimming..."
-# Download adapter file if it doesn't exist
+# Download Illumina adapter sequences if not present
 if [ ! -f "TruSeq3-PE.fa" ]; then
     wget https://raw.githubusercontent.com/timflutre/trimmomatic/master/adapters/TruSeq3-PE.fa
 fi
 
+# Run Trimmomatic in paired-end mode
 trimmomatic PE -threads 32 \
     ${FASTQ_DIR}/${SAMPLE}_R1_001.fastq.gz ${FASTQ_DIR}/${SAMPLE}_R2_001.fastq.gz \
     ${RESULTS_DIR}/trimmed/${SAMPLE}_R1_trimmed.fastq.gz ${RESULTS_DIR}/trimmed/${SAMPLE}_R1_unpaired.fastq.gz \
@@ -63,8 +75,9 @@ trimmomatic PE -threads 32 \
     ILLUMINACLIP:TruSeq3-PE.fa:2:30:10:2:keepBothReads \
     LEADING:20 TRAILING:20 SLIDINGWINDOW:4:20 MINLEN:36
 
-# 3. Align with bowtie2
+# Step 3: Align reads to mm10 genome with Bowtie2
 echo "Starting alignment..."
+# Align with sensitive parameters and filter for high quality paired reads
 bowtie2 -p 32 \
     --very-sensitive \
     --no-mixed \
@@ -76,11 +89,10 @@ bowtie2 -p 32 \
     samtools view -q 30 -F 1804 -f 2 -b | \
     samtools sort -@ 32 -o ${RESULTS_DIR}/bowtie2/${SAMPLE}.sorted.bam -
 
-# 4. Add read groups to header
+# Step 4: Add read groups to BAM header
 echo "Adding read groups to header..."
-# Create temporary header file
+# Create temporary header with read group info
 samtools view -H ${RESULTS_DIR}/bowtie2/${SAMPLE}.sorted.bam > temp_header.sam
-# Add read group line if not present
 if ! grep -q "^@RG" temp_header.sam; then
     echo -e "@RG\tID:${SAMPLE}\tSM:${SAMPLE}\tLB:lib1\tPL:ILLUMINA" >> temp_header.sam
 fi
@@ -91,13 +103,13 @@ samtools reheader temp_header.sam ${RESULTS_DIR}/bowtie2/${SAMPLE}.sorted.bam | 
     samtools view -b > ${RESULTS_DIR}/bowtie2/${SAMPLE}.with_rg.bam
 rm temp_header.sam
 
-# Index the BAM with read groups
+# Index BAM file
 samtools index ${RESULTS_DIR}/bowtie2/${SAMPLE}.with_rg.bam
 
-# Remove original sorted BAM to save space
+# Remove intermediate BAM to save space
 rm ${RESULTS_DIR}/bowtie2/${SAMPLE}.sorted.bam
 
-# 5. Remove duplicates
+# Step 5: Remove PCR duplicates with Picard
 echo "Removing PCR duplicates..."
 picard MarkDuplicates \
     INPUT=${RESULTS_DIR}/bowtie2/${SAMPLE}.with_rg.bam \
@@ -107,7 +119,7 @@ picard MarkDuplicates \
     VALIDATION_STRINGENCY=LENIENT \
     CREATE_INDEX=true
 
-# Generate QC metrics before removing intermediate files
+# Generate comprehensive QC metrics report
 echo "Generating QC metrics..."
 {
     echo "=== QC Metrics for ${SAMPLE} ==="
@@ -128,16 +140,13 @@ echo "Generating QC metrics..."
     wc -l ${RESULTS_DIR}/peaks/${SAMPLE}_peaks.narrowPeak
 } > ${RESULTS_DIR}/${SAMPLE}_qc_metrics.txt
 
-# Now remove intermediate BAM files to save space
+# Remove intermediate BAM files
 rm ${RESULTS_DIR}/bowtie2/${SAMPLE}.with_rg.bam
 rm ${RESULTS_DIR}/bowtie2/${SAMPLE}.with_rg.bam.bai
 
-# 6. Index deduplicated BAM (not needed since CREATE_INDEX=true above)
-# samtools index ${RESULTS_DIR}/filtered/${SAMPLE}.dedup.bam
-
-# 7. Generate bigWig files
+# Step 6: Generate coverage tracks as bigWig files
 echo "Generating bigWig files..."
-# RPKM normalized
+# Generate RPKM normalized coverage
 bamCoverage \
     --bam ${RESULTS_DIR}/filtered/${SAMPLE}.dedup.bam \
     --outFileName ${RESULTS_DIR}/bigwig/${SAMPLE}_RPKM.bw \
@@ -148,7 +157,7 @@ bamCoverage \
     --extendReads \
     --ignoreDuplicates
 
-# CPM normalized
+# Generate CPM normalized coverage
 bamCoverage \
     --bam ${RESULTS_DIR}/filtered/${SAMPLE}.dedup.bam \
     --outFileName ${RESULTS_DIR}/bigwig/${SAMPLE}_CPM.bw \
@@ -159,7 +168,7 @@ bamCoverage \
     --extendReads \
     --ignoreDuplicates
 
-# 8. Call peaks
+# Step 7: Call peaks with MACS2
 echo "Calling peaks..."
 macs2 callpeak \
     -t ${RESULTS_DIR}/filtered/${SAMPLE}.dedup.bam \

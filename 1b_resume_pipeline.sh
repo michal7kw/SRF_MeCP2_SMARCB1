@@ -1,13 +1,13 @@
 #!/bin/bash
-#SBATCH --job-name=resume_SMARCB1_pipeline
+#SBATCH --job-name=1b_resume_pipeline
 #SBATCH --account=kubacki.michal
 #SBATCH --mem=64GB
 #SBATCH --time=7-00:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=16
 #SBATCH --array=1-4
-#SBATCH --error="logs/resume_pipeline_%a.err"
-#SBATCH --output="logs/resume_pipeline_%a.out"
+#SBATCH --error="logs/1b_resume_pipeline.err"
+#SBATCH --output="logs/1b_resume_pipeline.out"
 
 # Set working directory
 WORKING_DIR="/beegfs/scratch/ric.broccoli/kubacki.michal/SRF_MeCP2_SMARCB1"

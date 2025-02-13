@@ -33,11 +33,13 @@ process_gene_list() {
         awk -v OFS="\t" '{
             if ($7 == "+") {
                 # For positive strand: TSS is start position
-                print $1, $4-2500, $4+2500, $10, ".", $7
+                tss = $4
             } else {
                 # For negative strand: TSS is end position
-                print $1, $5-2500, $5+2500, $10, ".", $7
+                tss = $5
             }
+            # Create window around TSS regardless of strand
+            print $1, tss-2500, tss+2500, $10, ".", $7
         }' | tr -d '";' >> "${temp_bed}"
     done < "${input_file}"
     

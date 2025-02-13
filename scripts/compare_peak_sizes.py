@@ -1,3 +1,17 @@
+"""
+This script compares ChIP-seq peak sizes between control (BG) and treatment (BM) samples.
+It processes normalized read count data from peak regions and calculates fold changes,
+applying quality filters and generating summary statistics.
+
+Key features:
+- Reads and validates input count files
+- Calculates mean signal for BG and BM sample groups 
+- Applies minimum count threshold filtering
+- Computes log2 fold changes with pseudocount normalization
+- Generates QC metrics and visualization
+- Outputs detailed comparison statistics
+"""
+
 import argparse
 import pandas as pd
 import numpy as np
@@ -10,7 +24,16 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 def validate_input_data(count_files):
-    """Validate input count files before processing."""
+    """
+    Validate input count files before processing.
+    
+    Args:
+        count_files (list): List of paths to count files to validate
+        
+    Raises:
+        FileNotFoundError: If any input file is missing
+        ValueError: If any file contains invalid/empty data
+    """
     for file in count_files:
         if not os.path.exists(file):
             raise FileNotFoundError(f"Count file not found: {file}")
@@ -24,7 +47,15 @@ def validate_input_data(count_files):
             raise ValueError(f"No valid count data in {file}")
 
 def compare_peaks(peak_count_files, output_file, sample_name, threads=1):
-    """Compare normalized peak counts between conditions."""
+    """
+    Compare normalized peak counts between conditions.
+    
+    Args:
+        peak_count_files (list): List of input count files
+        output_file (str): Path to output comparison file
+        sample_name (str): Name identifier for the comparison
+        threads (int): Number of threads to use (default: 1)
+    """
     
     # Create output directory if it doesn't exist
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
@@ -33,6 +64,7 @@ def compare_peaks(peak_count_files, output_file, sample_name, threads=1):
     peak_counts = {}
     first_df = None
     
+    # Load count data from each input file
     for count_file in peak_count_files:
         sample = os.path.basename(count_file).replace('_promoter_counts.txt', '')
         logger.info(f"Reading {count_file}...")
@@ -56,18 +88,18 @@ def compare_peaks(peak_count_files, output_file, sample_name, threads=1):
     # Create counts DataFrame
     counts_df = pd.DataFrame(peak_counts)
     
-    # Calculate means for BG and BM
+    # Calculate means for BG (control) and BM (treatment) groups
     bg_mean = counts_df[[col for col in counts_df.columns if col.startswith('BG')]].mean(axis=1)
     bm_mean = counts_df[[col for col in counts_df.columns if col.startswith('BM')]].mean(axis=1)
     
     # Calculate mean intensity for filtering
     mean_intensity = (bg_mean + bm_mean) / 2
     
-    # Filter out low count regions
+    # Filter out low count regions using minimum threshold
     min_count = 5  # Minimum count threshold
     mask = (bg_mean >= min_count) | (bm_mean >= min_count)
     
-    # Calculate log2 fold changes with filtering and improved normalization
+    # Create results dataframe with key metrics
     results_df = pd.DataFrame({
         'chr': first_df['chr'],
         'start': first_df['start'],
@@ -78,7 +110,7 @@ def compare_peaks(peak_count_files, output_file, sample_name, threads=1):
         'passed_filter': mask
     })
     
-    # Calculate log2 fold changes only for peaks that pass filter
+    # Calculate log2 fold changes with pseudocount for filtered peaks
     pseudocount = 1.0
     results_df['log2_fold_change'] = np.where(
         results_df['passed_filter'],
@@ -86,19 +118,19 @@ def compare_peaks(peak_count_files, output_file, sample_name, threads=1):
         np.nan
     )
     
-    # Add quality metrics
+    # Add coefficient of variation as quality metric
     results_df['coefficient_of_variation'] = np.where(
         results_df['mean_intensity'] > 0,
         np.sqrt(np.var([bg_mean, bm_mean], axis=0)) / results_df['mean_intensity'],
         np.nan
     )
     
-    # Sort by absolute fold change for filtered peaks
+    # Sort results by absolute fold change
     results_df['abs_fc'] = abs(results_df['log2_fold_change'])
     results_df = results_df.sort_values('abs_fc', ascending=False)
     results_df = results_df.drop(['abs_fc', 'passed_filter'], axis=1)
     
-    # Save results
+    # Save results to file
     results_df.to_csv(output_file, sep='\t', index=False)
     
     # Log summary statistics
@@ -113,7 +145,7 @@ def compare_peaks(peak_count_files, output_file, sample_name, threads=1):
     logger.info(f"Peaks up in BM (log2FC > 1): {(results_df['log2_fold_change'] > 1).sum()}")
     logger.info(f"Peaks down in BM (log2FC < -1): {(results_df['log2_fold_change'] < -1).sum()}")
     
-    # Generate QC plot
+    # Generate QC plot showing distribution of peak variability
     plt.figure(figsize=(10, 5))
     plt.hist(results_df['coefficient_of_variation'].dropna(), bins=50)
     plt.xlabel('Coefficient of Variation')
@@ -123,6 +155,7 @@ def compare_peaks(peak_count_files, output_file, sample_name, threads=1):
     plt.close()
 
 def main():
+    """Parse command line arguments and run peak comparison analysis"""
     parser = argparse.ArgumentParser(description='Compare peak sizes between BG and BM samples')
     parser.add_argument('--peak-counts', nargs='+', required=True,
                         help='List of peak count files')
@@ -147,3 +180,32 @@ def main():
 
 if __name__ == '__main__':
     main() 
+
+"""
+Summary of code functionality:
+
+This script performs differential binding analysis of ChIP-seq data between control (BG) 
+and treatment (BM) samples. Key steps include:
+
+1. Input Processing:
+   - Reads normalized read count data from peak regions
+   - Validates input files and data quality
+   
+2. Signal Analysis:
+   - Calculates mean signal for each condition (BG vs BM)
+   - Applies minimum count threshold to filter low-signal regions
+   - Computes log2 fold changes with pseudocount normalization
+   
+3. Quality Control:
+   - Calculates coefficient of variation for peak reproducibility
+   - Generates QC plots of peak variability
+   - Filters out unreliable measurements
+   
+4. Output Generation:
+   - Produces detailed comparison statistics
+   - Saves normalized and filtered results
+   - Generates summary metrics and visualizations
+
+The script is designed for analyzing differential binding of SMARCB1 protein
+between conditions, with built-in quality controls and detailed logging.
+"""
