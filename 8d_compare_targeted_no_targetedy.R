@@ -195,7 +195,7 @@ main <- function() {
   no_targeted_bm_profile <- calculate_metaprofile(bm_data, no_targeted_regions)
   
   # Calculate means and standard errors
-  x_pos <- seq(-2500, 2500, length.out = ncol(bivalent_bg_profile))
+  x_pos <- seq(-2500, 2500, length.out = ncol(targeted_bg_profile))
   
   # Create plotting data for individual profiles
   create_plot_data <- function(bg_profile, bm_profile, group_name) {
