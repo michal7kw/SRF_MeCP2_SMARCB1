@@ -275,17 +275,23 @@ main <- function() {
   bm_file <- file.path(input_dir_bw, "BM3_CPM.bw")
   gtf_file <- "data/gencode.vM10.annotation.gtf.gz"
   
-  # Define gene lists
-  bivalent_genes <- file.path(input_dir_gene_lists, "bivalent/expressed_targeted_bivalent_NPCs_1000.csv")
-  non_bivalent_genes <- file.path(input_dir_gene_lists, "bivalent/expressed_targeted_non_bivalent_NPCs_1000.csv")
+  files_suffix <- "_all.csv"
+  # files_suffix <- "_1000.csv"
 
-  targeted_genes <- file.path(input_dir_gene_lists, "targets/high_expression_targets2_1000.0.csv")
-  no_targeted_genes <- file.path(input_dir_gene_lists, "targets/high_expression_no_targets_1000.0.csv")
+  # Define gene lists
+  bivalent_genes <- paste0(file.path(input_dir_gene_lists, "bivalent/expressed_targeted_bivalent_NPCs"), files_suffix)
+  non_bivalent_genes <- paste0(file.path(input_dir_gene_lists, "bivalent/expressed_targeted_non_bivalent_NPCs"), files_suffix)
+
+  # targeted_genes <- paste0(file.path(input_dir_gene_lists, "targets/high_expression_targets2"), files_suffix)
+  # no_targeted_genes <- paste0(file.path(input_dir_gene_lists, "targets/high_expression_no_targets"), files_suffix)
+
+  targeted_genes <- file.path(input_dir_gene_lists, "targets/all_targets_final.csv")
+  no_targeted_genes <- file.path(input_dir_gene_lists, "targets/all_no_targets_final.csv")
   
-  bivalent_targeted_genes <- file.path(input_dir_gene_lists, "bivalent/expressed_targeted_bivalent_NPCs_1000.csv")
-  bivalent_no_targeted_genes <- file.path(input_dir_gene_lists, "bivalent/expressed_not_targeted_bivalent_NPCs_1000.csv")
-  nonbivalent_targeted_genes <- file.path(input_dir_gene_lists, "bivalent/expressed_targeted_non_bivalent_NPCs_1000.csv")
-  nonbivalent_no_targeted_genes <- file.path(input_dir_gene_lists, "bivalent/expressed_not_targeted_non_bivalent_NPCs_1000.csv")
+  bivalent_targeted_genes <- paste0(file.path(input_dir_gene_lists, "bivalent/expressed_targeted_bivalent_NPCs"), files_suffix)
+  bivalent_no_targeted_genes <- paste0(file.path(input_dir_gene_lists, "bivalent/expressed_not_targeted_bivalent_NPCs"), files_suffix)
+  nonbivalent_targeted_genes <- paste0(file.path(input_dir_gene_lists, "bivalent/expressed_targeted_non_bivalent_NPCs"), files_suffix)
+  nonbivalent_no_targeted_genes <- paste0(file.path(input_dir_gene_lists, "bivalent/expressed_not_targeted_non_bivalent_NPCs"), files_suffix)
   
   # Create output directory
   dir.create(output_dir, showWarnings = FALSE)

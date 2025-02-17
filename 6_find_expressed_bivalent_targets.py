@@ -18,14 +18,29 @@ Output files:
 where {threshold} is extracted from the input target_file name
 """
 
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+
 # Set up argument parser
 parser = argparse.ArgumentParser(description='Find intersection between bivalent and highly expressed target genes')
 parser.add_argument('--target_file', type=str, required=True,
                     help='Path to the target genes file')
 parser.add_argument('--no_target_file', type=str, required=True,
                     help='Path to the non-target genes file')
+parser.add_argument('--only_high_expression', type=str2bool, required=True,
+                    help='Whether to only consider high expression targets')
 
 args = parser.parse_args()
+
+# Print the value of only_high_expression to verify
+print(f"only_high_expression value: {args.only_high_expression}")
 
 data_dir = "Gene_lists/bivalent"
 
@@ -47,7 +62,17 @@ bivalent_no_targets = bivalent_genes[bivalent_genes['Gene'].isin(high_expr_no_ta
 non_bivalent_no_targets = high_expr_no_targets[~high_expr_no_targets['Gene'].isin(bivalent_genes['Gene'])]
 
 # Create output filenames based on input filename
-base_name = args.target_file.split('/')[-1].split('.')[0].split('_')[3]
+if args.only_high_expression:
+    # For high expression files, extract threshold from filename
+    try:
+        base_name = args.target_file.split('/')[-1].split('.')[0].split('_')[3]
+    except IndexError:
+        print("Error: Could not extract threshold from filename. Using 'unknown' as threshold value.")
+        base_name = "unknown"
+else:
+    # For all genes files, use 'all' as base name
+    base_name = "all"
+
 bivalent_output = f"expressed_targeted_bivalent_NPCs_{base_name}.csv"
 non_bivalent_output = f"expressed_targeted_non_bivalent_NPCs_{base_name}.csv"
 bivalent_no_targets_output = f"expressed_not_targeted_bivalent_NPCs_{base_name}.csv"
