@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-#' Compare SMARCB1 binding profiles between bivalent and non-bivalent genes using heatmaps
+#' Compare SMARCB1 binding profiles between targeted and non-targeted genes using heatmaps
 #' 
 #' Input files:
 #' - results/bigwig/BG1_CPM.bw: Control replicate 1 bigWig file
@@ -8,15 +8,15 @@
 #' - results/bigwig/BG3_CPM.bw: Control replicate 3 bigWig file
 #' - results/bigwig/BM3_CPM.bw: SMARCB1 ChIP-seq bigWig file
 #' - data/gencode.vM10.annotation.gtf.gz: Gene annotations
-#' - Gene_lists/bivalent/expressed_targeted_bivalent_NPCs_1000.csv: List of bivalent genes
-#' - Gene_lists/bivalent/expressed_targeted_non_bivalent_NPCs_1000.csv: List of non-bivalent genes
+#' - Gene_lists/targeted/expressed_targeted_targeted_NPCs_1000.csv: List of targeted genes
+#' - Gene_lists/targeted/expressed_targeted_non_targeted_NPCs_1000.csv: List of non-targeted genes
 #'
 #' Output files:
-#' - results/heatmaps_comparison_R/bivalent_nonbivalent_heatmaps.pdf: 
-#'   Heatmap comparing SMARCB1 binding at bivalent vs non-bivalent genes
+#' - results/metaprofiles_comparison_R/targeted_nontargeted_heatmaps.pdf: 
+#'   Heatmap comparing SMARCB1 binding at targeted vs non-targeted genes
 #'
 #' The script generates heatmaps comparing SMARCB1 binding profiles around TSS regions
-#' between bivalent and non-bivalent genes.
+#' between targeted and non-targeted genes.
 
 import os
 import numpy as np
@@ -115,8 +115,8 @@ def process_bigwig_files(bg_files: List[str], bm_file: str, regions: pd.DataFram
     
     return bg_matrix, bm_matrix
 
-def plot_heatmaps(bg_bivalent: np.ndarray, bm_bivalent: np.ndarray, 
-                  bg_nonbivalent: np.ndarray, bm_nonbivalent: np.ndarray,
+def plot_heatmaps(bg_targeted: np.ndarray, bm_targeted: np.ndarray, 
+                  bg_nontargeted: np.ndarray, bm_nontargeted: np.ndarray,
                   output_path: str):
     """Create and save comparative heatmaps."""
     # Set up the figure
@@ -136,11 +136,11 @@ def plot_heatmaps(bg_bivalent: np.ndarray, bm_bivalent: np.ndarray,
         ax.set_xticklabels(['-2.5kb', 'TSS', '+2.5kb'])
     
     # Find global max for consistent scale
-    vmax = max(np.percentile(bm_bivalent, 99), np.percentile(bm_nonbivalent, 99))
+    vmax = max(np.percentile(bm_targeted, 99), np.percentile(bm_nontargeted, 99))
     
     # Plot BM signal for both groups with same scale
-    create_heatmap(bm_bivalent, ax1, 'Bivalent Genes', vmax=vmax)
-    create_heatmap(bm_nonbivalent, ax2, 'Non-bivalent Genes', vmax=vmax)
+    create_heatmap(bm_targeted, ax1, 'Targeted Genes', vmax=vmax)
+    create_heatmap(bm_nontargeted, ax2, 'Non-targeted Genes', vmax=vmax)
     
     plt.tight_layout()
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
@@ -155,30 +155,32 @@ def main():
     ]
     bm_file = "results/bigwig/BM3_CPM.bw"
     gtf_file = "data/gencode.vM10.annotation.gtf.gz"
-    bivalent_genes = "Gene_lists/bivalent/expressed_targeted_bivalent_NPCs_1000.csv"
-    non_bivalent_genes = "Gene_lists/bivalent/expressed_targeted_non_bivalent_NPCs_1000.csv"
+    # targeted_genes = "Gene_lists/targeted/expressed_targeted_targeted_NPCs_1000.csv"
+    # non_targeted_genes = "Gene_lists/targeted/expressed_targeted_non_targeted_NPCs_1000.csv"
+    targeted_genes = "Gene_lists/targets/all_targets_final.csv"
+    non_targeted_genes = "Gene_lists/targets/all_no_targets_mm10.csv"
     
     # Load gene lists
     print("Loading gene lists...")
-    bivalent_list = load_gene_list(bivalent_genes)
-    nonbivalent_list = load_gene_list(non_bivalent_genes)
+    targeted_list = load_gene_list(targeted_genes)
+    nontargeted_list = load_gene_list(non_targeted_genes)
     
     # Get TSS regions
     print("Extracting TSS regions...")
-    bivalent_regions = get_tss_regions(gtf_file, bivalent_list)
-    nonbivalent_regions = get_tss_regions(gtf_file, nonbivalent_list)
+    targeted_regions = get_tss_regions(gtf_file, targeted_list)
+    nontargeted_regions = get_tss_regions(gtf_file, nontargeted_list)
     
     # Process bigWig files
-    print("Processing bigWig files for bivalent genes...")
-    bg_bivalent, bm_bivalent = process_bigwig_files(bg_files, bm_file, bivalent_regions)
+    print("Processing bigWig files for targeted genes...")
+    bg_targeted, bm_targeted = process_bigwig_files(bg_files, bm_file, targeted_regions)
     
-    print("Processing bigWig files for non-bivalent genes...")
-    bg_nonbivalent, bm_nonbivalent = process_bigwig_files(bg_files, bm_file, nonbivalent_regions)
+    print("Processing bigWig files for non-targeted genes...")
+    bg_nontargeted, bm_nontargeted = process_bigwig_files(bg_files, bm_file, nontargeted_regions)
     
     # Create heatmaps
     print("Generating heatmaps...")
-    output_path = "results/heatmaps_comparison_R/bivalent_nonbivalent_heatmaps.pdf"
-    plot_heatmaps(bg_bivalent, bm_bivalent, bg_nonbivalent, bm_nonbivalent, output_path)
+    output_path = "results/metaprofiles_comparison_R/targeted_nontargeted_heatmaps.pdf"
+    plot_heatmaps(bg_targeted, bm_targeted, bg_nontargeted, bm_nontargeted, output_path)
     
     print("Analysis completed successfully!")
 

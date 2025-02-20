@@ -1,5 +1,6 @@
 import pandas as pd
 import argparse
+import gzip
 
 # Set up argument parser
 parser = argparse.ArgumentParser(description='Filter genes based on baseMean threshold')
@@ -39,11 +40,51 @@ P.S
 DEA_PATH = './Gene_lists'
 TARGETS_PATH = './Gene_lists/targets'
 OUTPUT_PATH = './Gene_lists/targets'
+GTF_PATH = 'data/gencode.vM10.basic.annotation.gtf.gz'
+
+# Read the GTF file to get all genes from mm10 genome
+def get_all_genes_from_gtf(gtf_path):
+    genes = set()
+    # Define valid gene types
+    valid_gene_types = {
+        'protein_coding'
+        # , 'lincRNA', 'antisense',
+        # 'processed_transcript', 'miRNA', 'snoRNA',
+        # 'snRNA', 'rRNA'
+    }
+    
+    with gzip.open(gtf_path, 'rt') as f:
+        for line in f:
+            if line.startswith('#'):
+                continue
+            fields = line.strip().split('\t')
+            if fields[2] == 'gene':
+                # More robust attribute parsing
+                attr_dict = {}
+                for attr in fields[8].split(';'):
+                    if not attr.strip():
+                        continue
+                    try:
+                        key, value = attr.strip().split(' "', 1)
+                        attr_dict[key.strip()] = value.strip('"')
+                    except ValueError:
+                        continue
+                
+                # Check if it's a valid gene type
+                gene_type = attr_dict.get('gene_type', '')
+                gene_name = attr_dict.get('gene_name', '')
+                
+                if gene_type in valid_gene_types and gene_name:
+                    genes.add(gene_name)
+    return genes
 
 # Read the files
 dea = pd.read_csv(f'{DEA_PATH}/DEA_NSC.csv')
 targets1 = pd.read_csv(f'{TARGETS_PATH}/all_mecp2_targets_1.csv', header=None, names=['Gene'])
 targets2 = pd.read_csv(f'{TARGETS_PATH}/all_mecp2_targets_2.csv', header=None, names=['Gene'])
+
+# Get all genes from GTF
+all_mm10_genes = get_all_genes_from_gtf(GTF_PATH)
 
 # Get all genes from DEA data
 all_genes = set(dea['gene'])
@@ -52,6 +93,9 @@ all_genes = set(dea['gene'])
 # all_targets = set(targets1['Gene']).union(set(targets2['Gene']))
 all_targets = set(targets2['Gene'])
 
+# Find all genes that are not targets (from mm10 genome)
+all_no_targets_mm10 = all_mm10_genes - all_targets
+
 # Find all genes that are not targets (without expression filtering)
 all_no_targets = all_genes - all_targets
 
@@ -59,10 +103,15 @@ all_no_targets = all_genes - all_targets
 targets1.to_csv(f'{OUTPUT_PATH}/all_targets1.csv', index=False, header=False)
 targets2.to_csv(f'{OUTPUT_PATH}/all_targets2.csv', index=False, header=False)
 pd.DataFrame(list(all_no_targets), columns=['Gene']).to_csv(
-    f'{OUTPUT_PATH}/all_no_targets_final.csv', index=False, header=False)
+    f'{OUTPUT_PATH}/no_targets_final.csv', index=False, header=False)
+
+# Save all non-target genes from mm10 genome
+pd.DataFrame(list(all_no_targets_mm10), columns=['Gene']).to_csv(
+    f'{OUTPUT_PATH}/all_no_targets_mm10.csv', index=False, header=False)
 
 pd.DataFrame(list(all_targets), columns=['Gene']).to_csv(
     f'{OUTPUT_PATH}/all_targets_final.csv', index=False, header=False)
+
 
 # Filter DEA data for genes with baseMean > threshold
 high_expression_genes = set(dea[dea['baseMean'] > args.threshold]['gene'])
@@ -90,3 +139,8 @@ print(f"\nFiltered statistics (baseMean threshold: {args.threshold}):")
 print(f"Number of targets in list 1: {len(filtered_targets1)}")
 print(f"Number of targets in list 2: {len(filtered_targets2)}")
 print(f"Number of highly expressed non-target genes: {len(high_expression_no_targets)}")
+
+# Add statistics for mm10 genome
+print(f"\nMm10 genome statistics:")
+print(f"Total number of genes in mm10 genome: {len(all_mm10_genes)}")
+print(f"Total number of non-target genes from mm10: {len(all_no_targets_mm10)}")

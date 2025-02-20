@@ -22,7 +22,7 @@
 #' - Gene_lists/targets/high_expression_no_targets_1000.0.csv
 #'
 #' Output files:
-#' - results/metaprofiles_comparison_R_combined/combined_all_comparisons.pdf: 
+#' - results/metaprofiles_comparison_R/combined_all_comparisons.pdf: 
 #'   Combined plot showing all comparisons
 #' - Console output: Summary statistics for all comparisons
 
@@ -266,7 +266,7 @@ print_summary_stats <- function(name1, bg_profile1, bm_profile1, fc1,
 main <- function() {
   input_dir_bw <- "results/bigwig"
   input_dir_gene_lists <- "Gene_lists"
-  output_dir <- "results/metaprofiles_comparison_R_combined"
+  output_dir <- "results/metaprofiles_comparison_R"
   
   # Set paths
   bg_files <- c(file.path(input_dir_bw, "BG1_CPM.bw"),

@@ -23,3 +23,5 @@
 **/tmp/
 
 Archive/
+*.rds
+Rplots*
