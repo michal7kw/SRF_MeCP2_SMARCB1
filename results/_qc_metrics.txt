@@ -1,0 +1,12 @@
+=== QC Metrics for  ===
+Initial read counts:
+Raw reads: 0
+After trimming: 0
+
+Alignment stats (pre-deduplication):
+
+Post-deduplication stats:
+
+Duplication metrics:
+
+Number of peaks:
